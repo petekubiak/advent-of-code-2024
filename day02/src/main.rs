@@ -44,23 +44,15 @@ fn main() {
                                         .filter(|(index, _)| *index != position)
                                         .map(|(_, level)| level),
                                 )
-                                .map(|_| {
-                                    format!(
-                                        "{}: removed {} at position {}",
-                                        "MADE SAFE".blue(),
-                                        report[position],
-                                        position
-                                    )
-                                })
+                                .map_or_else(
+                                    |_| {
+                                        check_report(&mut report.iter().skip(1))
+                                            .map(|_| made_safe_report(report, 0))
+                                    },
+                                    |_| Ok(made_safe_report(report, position)),
+                                )
                             },
-                            |_| {
-                                Ok(format!(
-                                    "{}: removed {} at position {}",
-                                    "MADE SAFE".blue(),
-                                    report[position_before],
-                                    position_before
-                                ))
-                            },
+                            |_| Ok(made_safe_report(report, position_before)),
                         )
                         .inspect_err(|(message, _)| println!("{message}"))
                         .or(Err((message, position)))
@@ -117,4 +109,13 @@ fn check_report(report: &mut dyn Iterator<Item = &i32>) -> Result<(), (String, u
             }
         })
         .map(|_| ())
+}
+
+fn made_safe_report(report: &Vec<i32>, position: usize) -> String {
+    format!(
+        "{}: removed {} at position {}",
+        "MADE SAFE".blue(),
+        report[position],
+        position
+    )
 }
