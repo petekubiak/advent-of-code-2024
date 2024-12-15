@@ -21,25 +21,67 @@ fn main() {
 
     let safe_report_count = reports
         .filter(|report| {
-            let result = check_report(report).map_err(|(reason, position)| {
-                let remove_before = report.clone();
-                remove_before.remove()(reason, position)
-            });
-            let trace_message = if let Err((reason, _)) = &result {
-                format!("{}: {}", "UNSAFE".red(), reason)
-            } else {
-                "SAFE".green().to_string()
+            println!();
+            let result = check_report(&mut report.iter())
+                .inspect_err(|(message, _)| println!("{message}"))
+                .map_or_else(
+                    |(message, position)| {
+                        let position_before = position - 1;
+                        check_report(
+                            &mut report
+                                .iter()
+                                .enumerate()
+                                .filter(|(index, _)| *index != position_before)
+                                .map(|(_, level)| level),
+                        )
+                        .inspect_err(|(message, _)| println!("{message}"))
+                        .map_or_else(
+                            |_| {
+                                check_report(
+                                    &mut report
+                                        .iter()
+                                        .enumerate()
+                                        .filter(|(index, _)| *index != position)
+                                        .map(|(_, level)| level),
+                                )
+                                .map(|_| {
+                                    format!(
+                                        "{}: removed {} at position {}",
+                                        "MADE SAFE".blue(),
+                                        report[position],
+                                        position
+                                    )
+                                })
+                            },
+                            |_| {
+                                Ok(format!(
+                                    "{}: removed {} at position {}",
+                                    "MADE SAFE".blue(),
+                                    report[position_before],
+                                    position_before
+                                ))
+                            },
+                        )
+                        .inspect_err(|(message, _)| println!("{message}"))
+                        .or(Err((message, position)))
+                    },
+                    |_| Ok("SAFE".green().to_string()),
+                );
+
+            let trace_message = match &result {
+                Ok(message) => message,
+                Err((message, _)) => message,
             };
-            println!("{report:?}\t{trace_message}");
+            println!("\n{report:?}\t{trace_message}");
             result.is_ok()
         })
         .count();
     println!("{safe_report_count} safe reports found");
 }
 
-fn check_report(report: &Vec<i32>) -> Result<(), (String, usize)> {
+fn check_report(report: &mut dyn Iterator<Item = &i32>) -> Result<(), (String, usize)> {
     report
-        .iter()
+        .inspect(|level| print!("{} ", level))
         .enumerate()
         .try_fold((None, None), |state, (position, level)| match state {
             (None, _) => Ok((Some(level), None)),
@@ -49,7 +91,10 @@ fn check_report(report: &Vec<i32>) -> Result<(), (String, usize)> {
                     -3..=-1 => Direction::Down,
                     difference => {
                         return Err((
-                            format!("difference of {difference} at {previous_level} -> {level}"),
+                            format!(
+                                "{}: difference of {difference} at {previous_level} -> {level}",
+                                "UNSAFE".red()
+                            ),
                             position,
                         ))
                     }
@@ -59,7 +104,10 @@ fn check_report(report: &Vec<i32>) -> Result<(), (String, usize)> {
                         Ok((Some(level), Some(direction)))
                     } else {
                         Err((
-                            format!("direction change at {previous_level} -> {level}"),
+                            format!(
+                                "{}: direction change at {previous_level} -> {level}",
+                                "UNSAFE".red()
+                            ),
                             position,
                         ))
                     }
