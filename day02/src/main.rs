@@ -111,7 +111,7 @@ fn check_report(report: &mut dyn Iterator<Item = &i32>) -> Result<(), (String, u
         .map(|_| ())
 }
 
-fn made_safe_report(report: &Vec<i32>, position: usize) -> String {
+fn made_safe_report(report: &[i32], position: usize) -> String {
     format!(
         "{}: removed {} at position {}",
         "MADE SAFE".blue(),
