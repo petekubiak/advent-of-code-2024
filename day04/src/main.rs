@@ -1,4 +1,6 @@
-use std::fs;
+use color_eyre::Result;
+
+mod ui;
 
 struct Position {
     row: usize,
@@ -6,7 +8,7 @@ struct Position {
 }
 
 impl Position {
-    fn offset(self, offset: &Offset) -> Self {
+    fn offset(&self, offset: &Offset) -> Self {
         Position {
             row: (self.row as isize).saturating_add(offset.row) as usize,
             column: (self.column as isize).saturating_add(offset.column) as usize,
@@ -58,22 +60,37 @@ impl Iterator for DirectionIterator {
     }
 }
 
-fn main() {
-    let input = fs::read_to_string("input").unwrap();
+#[tokio::main]
+async fn main() -> Result<()> {
+    color_eyre::install()?;
+    tokio::spawn(ui::ui_task()).await?;
+    Ok(())
 
-    let grid: Vec<Vec<char>> = input.lines().map(|row| row.chars().collect()).collect();
-
-    grid.iter().enumerate().for_each(|(row_index, row)| {
-        row.iter()
-            .enumerate()
-            .for_each(|(column_index, character)| {
-                let position = Position {
-                    row: row_index,
-                    column: column_index,
-                };
-                if character == "X" {
-                    Position::directions().try_for_each(|direction| )
-                }
-            })
-    });
+    // grid.iter().enumerate().for_each(|(row_index, row)| {
+    //     row.iter()
+    //         .enumerate()
+    //         .for_each(|(column_index, character)| {
+    //             let check_char_at_position = |expected: char, position: &Position| {
+    //                 if grid[position.row][position.column] == expected {
+    //                     Ok(())
+    //                 } else {
+    //                     Err(())
+    //                 }
+    //             };
+    //             if character == &'X' {
+    //                 let x_position = Position {
+    //                     row: row_index,
+    //                     column: column_index,
+    //                 };
+    //                 Position::directions().try_for_each(|direction| {
+    //                     let m_position = x_position.offset(direction);
+    //                     check_char_at_position('M', &m_position)?;
+    //                     let a_position = m_position.offset(direction);
+    //                     check_char_at_position('A', &a_position)?;
+    //                     let s_position = a_position.offset(direction);
+    //                     check_char_at_position('S', &s_position)
+    //                 });
+    //             }
+    //         })
+    // });
 }
