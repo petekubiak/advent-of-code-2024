@@ -1,4 +1,8 @@
+use std::{fs, sync::Arc};
+
 use color_eyre::Result;
+use ratatui::text::{Line, Span, Text};
+use tokio::sync::Mutex;
 
 mod ui;
 
@@ -63,8 +67,21 @@ impl Iterator for DirectionIterator {
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
-    tokio::spawn(ui::ui_task()).await?;
-    Ok(())
+
+    let input = fs::read_to_string("input").unwrap();
+
+    let grid: Arc<Mutex<Text>> = Arc::new(Mutex::new(
+        input
+            .lines()
+            .map(|row| {
+                row.chars()
+                    .map(|character| Span::raw(character.to_string()))
+                    .collect::<Line>()
+            })
+            .collect(),
+    ));
+
+    tokio::spawn(ui::ui_task(grid.clone())).await?
 
     // grid.iter().enumerate().for_each(|(row_index, row)| {
     //     row.iter()
