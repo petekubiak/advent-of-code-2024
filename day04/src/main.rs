@@ -1,8 +1,8 @@
-use std::{fs, sync::Arc};
+use std::fs;
 
 use color_eyre::Result;
 use ratatui::text::{Line, Span, Text};
-use tokio::sync::Mutex;
+use tokio::sync::mpsc;
 
 mod ui;
 
@@ -70,18 +70,17 @@ async fn main() -> Result<()> {
 
     let input = fs::read_to_string("input").unwrap();
 
-    let grid: Arc<Mutex<Text>> = Arc::new(Mutex::new(
-        input
-            .lines()
-            .map(|row| {
-                row.chars()
-                    .map(|character| Span::raw(character.to_string()))
-                    .collect::<Line>()
-            })
-            .collect(),
-    ));
+    let grid: Text = input
+        .lines()
+        .map(|row| {
+            row.chars()
+                .map(|character| Span::raw(character.to_string()))
+                .collect::<Line>()
+        })
+        .collect();
 
-    tokio::spawn(ui::ui_task(grid.clone())).await?
+    let (ui_queue, ui_rx) = mpsc::channel(8);
+    tokio::spawn(ui::ui_task(ui_rx, grid.clone())).await?
 
     // grid.iter().enumerate().for_each(|(row_index, row)| {
     //     row.iter()

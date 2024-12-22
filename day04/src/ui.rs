@@ -1,27 +1,22 @@
-use std::sync::Arc;
-
 use color_eyre::Result;
 use crossterm::event::{self, Event};
-use ratatui::{text::Text, DefaultTerminal};
-use tokio::sync::Mutex;
+use ratatui::text::Text;
+use tokio::sync::mpsc::Receiver;
 
-pub(crate) async fn ui_task(grid: Arc<Mutex<Text<'_>>>) -> Result<()> {
-    let terminal = ratatui::init();
-    let result = run(terminal, grid);
-    ratatui::restore();
-    result
-}
+use crate::Position;
 
-fn run(mut terminal: DefaultTerminal, grid: Arc<Mutex<Text>>) -> Result<()> {
-    loop {
+pub(crate) async fn ui_task(rx: Receiver<Position>, grid: Text<'_>) -> Result<()> {
+    let mut terminal = ratatui::init();
+
+    let result = loop {
         terminal.draw(|frame| {
-            if let Ok(grid) = grid.clone().try_lock_owned() {
-                frame.render_widget(&*grid, frame.area());
-            }
+            frame.render_widget(&grid, frame.area());
         })?;
         if matches!(event::read().expect("failed to read event"), Event::Key(_)) {
-            break;
+            break Ok(());
         }
-    }
-    Ok(())
+    };
+
+    ratatui::restore();
+    result
 }
