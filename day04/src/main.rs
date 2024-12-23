@@ -5,8 +5,8 @@ use std::fs;
 
 use color_eyre::Result;
 use ratatui::text::{Line, Span, Text};
-use tokio::sync::mpsc;
-use types::Position;
+use tokio::sync::mpsc::{self, Sender};
+use types::{Offset, Position, Status, UpdateMessage};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -42,17 +42,41 @@ async fn main() -> Result<()> {
                         row: row_index,
                         column: column_index,
                     };
-                    Position::directions().try_for_each(|direction| {
+                    Position::directions().for_each(|direction| {
+                        send_update(&ui_queue, &x_position, direction, Status::Checking);
+
                         let m_position = x_position.offset(direction);
-                        check_char_at_position("M", &m_position)?;
+                        if check_char_at_position("M", &m_position).is_err() {
+                            send_update(&ui_queue, &x_position, direction, Status::Invalid);
+                            return;
+                        }
+
                         let a_position = m_position.offset(direction);
-                        check_char_at_position("A", &a_position)?;
+                        if check_char_at_position("A", &a_position).is_err() {
+                            send_update(&ui_queue, &x_position, direction, Status::Invalid);
+                            return;
+                        }
+
                         let s_position = a_position.offset(direction);
-                        check_char_at_position("S", &s_position)
+                        if check_char_at_position("S", &s_position).is_err() {
+                            send_update(&ui_queue, &x_position, direction, Status::Invalid);
+                            return;
+                        }
+
+                        send_update(&ui_queue, &x_position, direction, Status::Valid);
                     });
                 }
             })
     });
 
     Ok(())
+}
+
+fn send_update(
+    queue: &Sender<UpdateMessage>,
+    position: &Position,
+    direction: &Offset,
+    status: Status,
+) {
+    let _ = queue.try_send((position.clone(), direction.clone(), status));
 }

@@ -68,3 +68,5 @@ pub(crate) enum Status {
     Invalid,
     Valid,
 }
+
+pub(crate) type UpdateMessage = (Position, Offset, Status);
