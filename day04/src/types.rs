@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Position {
     pub row: usize,
     pub column: usize,
@@ -20,6 +21,12 @@ impl Position {
 pub struct Offset {
     row: isize,
     column: isize,
+}
+
+impl Offset {
+    pub fn none() -> Self {
+        Self { row: 0, column: 0 }
+    }
 }
 
 pub struct DirectionIterator {
@@ -54,4 +61,10 @@ impl Iterator for DirectionIterator {
         self.index += 1;
         result
     }
+}
+
+pub(crate) enum Status {
+    Checking,
+    Invalid,
+    Valid,
 }
